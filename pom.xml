@@ -4,20 +4,24 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>me.khanh.libs</groupId>
-    <artifactId>KCore</artifactId>
+    <groupId>me.khanh.libs.kcore</groupId>
+    <artifactId>parent</artifactId>
     <version>1.0</version>
     <packaging>pom</packaging>
     <modules>
-<!--        <module>command</module>-->
         <module>command-bukkit</module>
     </modules>
+    <name>KCore</name>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <build>
+        <defaultGoal>clean package install</defaultGoal>
+    </build>
 
     <dependencies>
         <dependency>
