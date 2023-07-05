@@ -371,7 +371,7 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public final boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
-        if (!permission.isEmpty() && !sender.hasPermission(permission)){
+        if (!hasPermission(sender)){
             sender.sendMessage(colorize(getNoPermissionMessage()));
             return true;
         }
