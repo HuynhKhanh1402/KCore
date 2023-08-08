@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -238,6 +239,7 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
      */
     public List<String> onTabComplete(CommandSender sender, List<String> args) {
         return subCommands.stream()
+                .filter(bukkitCommand -> bukkitCommand.hasPermission(sender))
                 .map(BukkitCommand::getName)
                 .collect(Collectors.toList());
     }
@@ -269,7 +271,6 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
 
     /**
      * Colorizes a string by replacing color codes with the corresponding ChatColor.
-     * Color codes can be in the format "&#[a-f0-9]{6}".
      *
      * @param message the string to colorize
      * @return the colorized string
@@ -330,7 +331,7 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
      * @param sender the CommandSender executing the command
      * @param runnable the Runnable representing the command to be executed
      */
-    private void execute(CommandSender sender, Runnable runnable){
+    private void executeCommand(CommandSender sender, Runnable runnable){
         try {
             runnable.run();
         } catch (Throwable throwable){
@@ -339,6 +340,27 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + String.format("%s: %s", throwable.getClass().getName(), throwable.getMessage()));
 
             throwable.printStackTrace();
+        }
+    }
+
+    /**
+     * Executes a tab complete as a Runnable and handles any errors that occur during execution.
+     *
+     * @param sender the CommandSender executing the command
+     * @param callable the Callable representing the tab complete to be executed
+     * @return tab complete
+     */
+    private List<String> executeTabComplete(CommandSender sender, Callable<List<String>> callable){
+        try {
+            return callable.call();
+        } catch (Throwable throwable){
+
+            sender.sendMessage(ChatColor.RED + "An error occurred while handle tab complete.");
+            sender.sendMessage(ChatColor.RED + String.format("%s: %s", throwable.getClass().getName(), throwable.getMessage()));
+
+            throwable.printStackTrace();
+
+            return new ArrayList<>();
         }
     }
 
@@ -380,17 +402,15 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
 
             List<String> arguments = new ArrayList<>();
 
-            execute(sender, () -> onCommand(sender, arguments));
-
             if (sender instanceof Player){
-                execute(sender, () -> onCommand((Player) sender, arguments));
+                executeCommand(sender, () -> onCommand((Player) sender, arguments));
             } else {
-                execute(sender, () -> onCommand(sender, arguments));
+                executeCommand(sender, () -> onCommand(sender, arguments));
             }
 
         } else {
 
-            String nexArgs = args[1];
+            String nexArgs = args[0];
 
             BukkitCommand subCommand = getSubCommand(nexArgs, true);
 
@@ -399,9 +419,9 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
                 List<String> arguments = Arrays.asList(args);
 
                 if (sender instanceof Player){
-                    execute(sender, () -> onCommand((Player) sender, arguments));
+                    executeCommand(sender, () -> onCommand((Player) sender, arguments));
                 } else {
-                    execute(sender, () -> onCommand(sender, arguments));
+                    executeCommand(sender, () -> onCommand(sender, arguments));
                 }
 
             } else {
@@ -416,6 +436,41 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public final List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
-        return new ArrayList<>();
+
+        if (!hasPermission(sender)){
+            return new ArrayList<>();
+        }
+
+        if (args.length == 1){
+
+            List<String> list = Arrays.asList(args);
+
+            if (sender instanceof Player){
+                return executeTabComplete(sender, () -> onTabComplete((Player) sender, list));
+            } else {
+                return executeTabComplete(sender, () -> onTabComplete(sender, list));
+            }
+
+        } else {
+
+            String nexArgs = args[0];
+
+            BukkitCommand subCommand = getSubCommand(nexArgs, true);
+
+            if (subCommand != null){
+
+                return subCommand.onTabComplete(sender, command, alias, args);
+
+            } else {
+
+                List<String> arguments = Arrays.asList(Arrays.copyOfRange(args, 1, args.length));
+
+                if (sender instanceof Player){
+                    return executeTabComplete(sender, () -> onTabComplete((Player) sender, arguments));
+                } else {
+                    return executeTabComplete(sender, () -> onTabComplete(sender, arguments));
+                }
+            }
+        }
     }
 }
