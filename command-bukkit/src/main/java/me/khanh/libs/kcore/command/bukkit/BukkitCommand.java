@@ -241,6 +241,7 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
         return subCommands.stream()
                 .filter(bukkitCommand -> bukkitCommand.hasPermission(sender))
                 .map(BukkitCommand::getName)
+                .filter(s -> s.startsWith(args.get(0)))
                 .collect(Collectors.toList());
     }
 
@@ -459,11 +460,11 @@ public abstract class BukkitCommand implements CommandExecutor, TabCompleter {
 
             if (subCommand != null){
 
-                return subCommand.onTabComplete(sender, command, alias, args);
+                return subCommand.onTabComplete(sender, command, alias, Arrays.copyOfRange(args, 1, args.length));
 
             } else {
 
-                List<String> arguments = Arrays.asList(Arrays.copyOfRange(args, 1, args.length));
+                List<String> arguments = Arrays.asList(args);
 
                 if (sender instanceof Player){
                     return executeTabComplete(sender, () -> onTabComplete((Player) sender, arguments));
